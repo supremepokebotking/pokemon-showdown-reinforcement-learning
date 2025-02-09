@@ -4,6 +4,8 @@
   "version": "0.11.9",
   "main": "dist/sim/index.js",
   "dependencies": {
+    "@tensorflow/tfjs-node-gpu": "^4.13.0",
+    "machinelearn": "^2.1.5",
     "esbuild": "^0.16.10",
     "mysql2": "^3.9.7",
     "preact": "^10.5.15",

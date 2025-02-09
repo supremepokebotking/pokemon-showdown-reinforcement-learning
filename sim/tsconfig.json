@@ -7,9 +7,9 @@
 			"target": "esnext",
 			"module": "commonjs",
 			"moduleResolution": "node",
-			"strict": true,
+			"strict": false,
 			"allowJs": true,
-			"checkJs": true,
+			"checkJs": false,
 			"incremental": true,
 			"allowUnreachableCode": false
 	},

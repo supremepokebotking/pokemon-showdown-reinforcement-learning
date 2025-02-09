@@ -382,6 +382,9 @@ export class BattleTextStream extends Streams.ReadWriteStream {
 		this.currentMessage += '' + message;
 		const index = this.currentMessage.lastIndexOf('\n');
 		if (index >= 0) {
+			// these logs interefere with trapped
+			//console.log("message2", message)
+			//console.log("this.currentMessage", this.currentMessage)
 			void this.battleStream.write(this.currentMessage.slice(0, index));
 			this.currentMessage = this.currentMessage.slice(index + 1);
 		}
@@ -391,3 +394,10 @@ export class BattleTextStream extends Streams.ReadWriteStream {
 		return this.battleStream.writeEnd();
 	}
 }
+
+/*
+./pokemon-showdown simulate-battle
+>start {"formatid":"gen8randombattle"}
+>player p1 {"name":"Alice"}
+>player p2 {"name":"Bob"}
+*/

@@ -24,6 +24,63 @@ import type {RequestState} from './battle';
 import {Pokemon, EffectState} from './pokemon';
 import {State} from './state';
 import {toID} from './dex';
+import {AttackActions} from './pokemon-label-encoders';
+import {SelectableTarget} from './pokemon-label-encoders';
+import {BaseEncoder} from './pokemon-label-encoders';
+
+
+function getTargetsForMove(target, gameType, position){
+  return []
+}
+
+
+function get_actions_for_gen(gen: Number, gametype: 'singles' | 'doubles' | 'triples'){
+  if (gen === 8){
+    return [
+      AttackActions.ATTACK_1.name, AttackActions.ATTACK_2.name, AttackActions.ATTACK_3.name, AttackActions.ATTACK_4.name,
+      AttackActions.SWITCH_1.name, AttackActions.SWITCH_2.name, AttackActions.SWITCH_3.name, AttackActions.SWITCH_4.name, AttackActions.SWITCH_5.name, AttackActions.SWITCH_6.name,
+      AttackActions.DYNA_1.name, AttackActions.DYNA_2.name, AttackActions.DYNA_3.name, AttackActions.DYNA_4.name,
+    ]
+  }
+
+  if (gen === 9){
+    return [
+      AttackActions.ATTACK_1.name, AttackActions.ATTACK_2.name, AttackActions.ATTACK_3.name, AttackActions.ATTACK_4.name,
+      AttackActions.SWITCH_1.name, AttackActions.SWITCH_2.name, AttackActions.SWITCH_3.name, AttackActions.SWITCH_4.name, AttackActions.SWITCH_5.name, AttackActions.SWITCH_6.name,
+      AttackActions.TERA_1.name, AttackActions.TERA_2.name, AttackActions.TERA_3.name, AttackActions.TERA_4.name,
+    ]
+  }
+
+  // should not reach here
+  return [
+    AttackActions.ATTACK_1.name, AttackActions.ATTACK_2.name, AttackActions.ATTACK_3.name, AttackActions.ATTACK_4.name,
+    AttackActions.SWITCH_1.name, AttackActions.SWITCH_2.name, AttackActions.SWITCH_3.name, AttackActions.SWITCH_4.name, AttackActions.SWITCH_5.name, AttackActions.SWITCH_6.name,
+  ]
+}
+
+function getSwitchTargets(gameType){
+  return []
+}
+
+
+function getEmptyTargets(legal_actions_size, gameType){
+  return []
+}
+
+// Creates an array of numbers progressing from start up to and including end
+function range(start: number, end?: number, step = 1) {
+	if (end === undefined) {
+		end = start;
+		start = 0;
+	}
+	const result = [];
+	for (; start <= end; start += step) {
+		result.push(start);
+	}
+	return result;
+}
+
+
 
 /** A single action that can be chosen. */
 export interface ChosenAction {
@@ -391,6 +448,401 @@ export class Side {
 		this.battle.send('sideupdate', `${this.id}\n${sideUpdate}`);
 	}
 
+	getSideEncoding(fullObservation:boolean, seen_details:AnyObject){
+		//    for (const [i, mon] of this.pokemon.entries()) {
+			var teamCount = 0;
+		
+			var cat_encodes = []
+			var raw_encodes = []
+			for (const pokemon of this.pokemon) {
+			  teamCount += 1;
+			  // player request
+			  if(fullObservation){
+				let unused_seen_data = {
+				  'ability': 'hidden_ability',
+				  'item': 'hidden_item',
+				  'form': 'hidden_pokemon',
+				  'attacks': {},
+				}
+		
+				var [fragement_category_encode, fragement_raw_poke_encodes] = pokemon.getEncoding(fullObservation, unused_seen_data)
+				cat_encodes = cat_encodes.concat(fragement_category_encode)
+				raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+			  }else{
+				// enemy seen before request
+				let baseSpeciesName = pokemon.species.baseSpecies
+				if(baseSpeciesName in seen_details ){
+				  let seen_data = seen_details[baseSpeciesName]
+				  var [fragement_category_encode, fragement_raw_poke_encodes] = pokemon.getEncoding(fullObservation, seen_data)
+				  cat_encodes = cat_encodes.concat(fragement_category_encode)
+				  raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+				}else{
+				  // enemy hidden never seen before
+				  var [fragement_category_encode, fragement_raw_poke_encodes] = Pokemon.getEmptyOrHiddenObservation(true)
+				  cat_encodes = cat_encodes.concat(fragement_category_encode)
+				  raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+				}
+			  }
+			}
+		
+			// Fill any void with empty pokemon
+			// place empty attacks here to fill void worororo
+			for (var i = teamCount; i < 6; i++){
+			  var [fragement_category_encode, fragement_raw_poke_encodes] = Pokemon.getEmptyOrHiddenObservation(!fullObservation)
+			  cat_encodes = cat_encodes.concat(fragement_category_encode)
+			  raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+			}
+		
+		
+			return [cat_encodes, raw_encodes]
+		  }
+		
+		  getRawObservationSideEncoding(fullObservation:boolean, seen_details:AnyObject){
+			var teamCount = 0;
+		
+			var cat_encodes = []
+			var raw_encodes = []
+			for (const pokemon of this.pokemon) {
+			  teamCount += 1;
+			  // player request
+			  if(fullObservation){
+				let unused_seen_data = {
+				  'ability': 'hidden_ability',
+				  'item': 'hidden_item',
+				  'form': 'hidden_pokemon',
+				  'attacks': {},
+				}
+		
+				var [fragement_category_encode, fragement_raw_poke_encodes] = pokemon.getRawObservationEncoding(fullObservation, unused_seen_data)
+				cat_encodes = cat_encodes.concat(fragement_category_encode)
+				raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+			  }else{
+				// enemy seen before request
+				let baseSpeciesName = pokemon.species.baseSpecies
+				if(baseSpeciesName in seen_details ){
+				  let seen_data = seen_details[baseSpeciesName]
+				  var [fragement_category_encode, fragement_raw_poke_encodes] = pokemon.getRawObservationEncoding(fullObservation, seen_data)
+				  cat_encodes = cat_encodes.concat(fragement_category_encode)
+				  raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+				}else{
+				  // enemy hidden never seen before
+				  var [fragement_category_encode, fragement_raw_poke_encodes] = Pokemon.getEmptyOrHiddenObservation(true)
+				  cat_encodes = cat_encodes.concat(fragement_category_encode)
+				  raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+				}
+			  }
+			}
+		
+			// Fill any void with empty pokemon
+			// place empty attacks here to fill void worororo
+			for (var i = teamCount; i < 6; i++){
+			  var [fragement_category_encode, fragement_raw_poke_encodes] = Pokemon.getEmptyOrHiddenObservation(!fullObservation)
+			  cat_encodes = cat_encodes.concat(fragement_category_encode)
+			  raw_encodes = raw_encodes.concat(fragement_raw_poke_encodes)
+			}
+		
+			return [cat_encodes, raw_encodes]
+		
+		  }
+		
+		  getEncodingPokemonLabels(){
+		
+			var labels_cat_encodes = []
+			var labels_raw_encodes = []
+		
+			// Perform once for p1 and once for p2
+			for (var i = 0; i < 1; i++){
+			  var [fragement_category_encode, fragement_raw_poke_encodes] = Pokemon.rawVerifyPokemonLabels(true)
+			  labels_cat_encodes = labels_cat_encodes.concat(fragement_category_encode)
+			  labels_raw_encodes = labels_raw_encodes.concat(fragement_raw_poke_encodes)
+			}
+		
+			for (var i = 0; i < 1; i++){
+			  var [fragement_category_encode, fragement_raw_poke_encodes] = Pokemon.rawVerifyPokemonLabels(false)
+			  labels_cat_encodes = labels_cat_encodes.concat(fragement_category_encode)
+			  labels_raw_encodes = labels_raw_encodes.concat(fragement_raw_poke_encodes)
+			}
+		
+			return [labels_cat_encodes, labels_raw_encodes]
+		  }
+		
+		
+		  get_valid_moves(request: AnyObject, gen, gameType){
+		//    requests[i] = {forceSwitch: switchTable, side: side.getRequestData()};/
+		//    requests[i] = {teamPreview: true, maxTeamSize, side: side.getRequestData()};
+		//    requests[i] = {active: activeData, side: side.getRequestData()};
+		///    requests[i] = {wait: true, side: this.sides[i].getRequestData()};
+		
+		
+			var valid_moves = {}
+			var valid_targets = {}
+		
+			var ally_positionings = ['a', 'b', 'c']
+			var positionIndex = 0;
+		
+			if (request.wait) {
+			  // wait request
+			  // do nothing
+			  var all_possible_actions = get_actions_for_gen(gen, gameType)
+			  var legal_actions = Array(all_possible_actions.length).fill(0)
+			  var legal_targets = getEmptyTargets(legal_actions.length, gameType)
+			  const position = ally_positionings[positionIndex]
+		//      if(gameType in ['singles', 'doubles', 'triples']){
+				valid_moves[position] = legal_actions
+				valid_targets[position] = legal_targets
+				positionIndex++;
+		//      }
+			} else if (request.forceSwitch) {
+			  // switch request
+			  const pokemon = request.side.pokemon;
+			  const chosen: number[] = [];
+			  request.forceSwitch.map((mustSwitch: AnyObject) => {
+				var all_possible_actions = get_actions_for_gen(gen, gameType)
+				var legal_actions = Array(all_possible_actions.length).fill(0)
+				var legal_targets = getEmptyTargets(legal_actions.length, gameType)
+				const position = ally_positionings[positionIndex]
+		
+				if (!mustSwitch) {
+				  valid_moves[position] = legal_actions
+				  valid_targets[position] = legal_targets
+				  positionIndex++;
+				  return;
+				}
+		
+				//console.log('pokemon', pokemon)
+				//console.log('pokemon[0]', pokemon[0])
+				//console.log('pokemon[0].reviving', pokemon[0].reviving)
+				//console.log('pokemon[1].reviving', pokemon[1].reviving)
+				const isDuringRevival = (pokemon[0].reviving || pokemon[1].reviving)
+				const canSwitch = range(1, 6).filter(i => (
+				  pokemon[i - 1] &&
+				  // not active
+				  i > request.forceSwitch.length &&
+				  // not chosen for a simultaneous switch
+				  !chosen.includes(i) &&
+				  // not fainted
+				  ((!pokemon[i - 1].condition.endsWith(` fnt`) && !isDuringRevival)||
+//				  ((this.slotConditions[pokemon[0].position]['revivalblessing'] || this.slotConditions[pokemon[1].position]['revivalblessing'])
+//				  ((pokemon[0].reviving || pokemon[1].reviving)
+				  (isDuringRevival
+				   && pokemon[i - 1].condition.endsWith(` fnt`)))
+				));
+				//console.log('canSwitch', canSwitch)
+		
+				if (!canSwitch.length) {
+				  valid_moves[position] = legal_actions
+				  valid_targets[position] = legal_targets
+				  positionIndex++;
+				  return;
+				}
+		
+				for (const switch_pos of canSwitch){
+				  const switch_key = `switch ${switch_pos}`
+				  const switch_index = all_possible_actions.indexOf(switch_key)
+				  legal_actions[switch_index] = 1
+				  var raw_switch_targets = getSwitchTargets(gameType)
+		
+				  raw_switch_targets.map(current_target => {
+					const target_index = current_target.index;
+					legal_targets[switch_index][target_index] = 1
+				  });
+		
+				}
+		
+				valid_moves[position] = legal_actions
+				valid_targets[position] = legal_targets
+				positionIndex++;
+			  });
+		
+			} else if (request.active) {
+			  // move request
+			  let [canMegaEvo, canUltraBurst, canZMove, canDynamax, canTerastallize] = [true, true, true, true, true];
+			  const pokemon = request.side.pokemon;
+			  const chosen: number[] = [];
+			  request.active.map((active: AnyObject, i: number) => {
+				var all_possible_actions = get_actions_for_gen(gen, gameType)
+				var legal_actions = Array(all_possible_actions.length).fill(0)
+				var legal_targets = getEmptyTargets(legal_actions.length, gameType)
+				const position = ally_positionings[i];
+		
+				if (pokemon[i].condition.endsWith(` fnt`)) {
+				  valid_moves[position] = legal_actions
+				  valid_targets[position] = legal_targets
+				  positionIndex++;
+				  return
+				}
+		
+				canMegaEvo = canMegaEvo && active.canMegaEvo;
+				canUltraBurst = canUltraBurst && active.canUltraBurst;
+				canZMove = canZMove && !!active.canZMove;
+				canDynamax = canDynamax && !!active.canDynamax;
+				canTerastallize = canTerastallize && !!active.canTerastallize;
+		
+				// Determine whether we should change form if we do end up switching
+				const change = (canMegaEvo || canUltraBurst || canDynamax || canTerastallize);
+				// If we've already dynamaxed or if we're planning on potentially dynamaxing
+				// we need to use the maxMoves instead of our regular moves
+		
+				const useMaxMoves = (!active.canDynamax && active.maxMoves) || (change && canDynamax);
+		//        const possibleMoves = useMaxMoves ? active.maxMoves.maxMoves : active.moves;
+				const possibleMoves = active.moves;
+		
+		
+				let canMove = range(1, possibleMoves.length).filter(j => (
+				  // not disabled
+				  !possibleMoves[j - 1].disabled &&
+				  (possibleMoves[j - 1].pp === undefined || possibleMoves[j - 1].pp > 0)
+				  // NOTE: we don't actually check for whether we have PP or not because the
+				  // simulator will mark the move as disabled if there is zero PP and there are
+				  // situations where we actually need to use a move with 0 PP (Gen 1 Wrap).
+				)).map(j => {
+				  const move_key = `move ${j}`
+				  const move_index = all_possible_actions.indexOf(move_key)
+				  legal_actions[move_index] = 1
+				  const raw_targets = getTargetsForMove(possibleMoves[j - 1].target, gameType, position)
+				  raw_targets.map(current_target => {
+					const target_index = current_target.index;
+					legal_targets[move_index][target_index] = 1
+				  });
+		
+				  if (change) {
+					if (canMegaEvo) {
+					  const mega_key = `mega ${j}`
+					  const mega_index = all_possible_actions.indexOf(mega_key)
+					  legal_actions[mega_index] = 1
+		
+					  const raw_targets = getTargetsForMove(possibleMoves[j - 1].target, gameType, position)
+					  raw_targets.map(current_target => {
+						const target_index = current_target.index;
+						legal_targets[mega_index][target_index] = 1
+					  });
+		
+					} else if(canUltraBurst) {
+					  const ultra_key = `ultra ${j}`
+					  const ultra_index = all_possible_actions.indexOf(ultra_key)
+					  legal_actions[ultra_index] = 1
+		
+		
+					  const raw_targets = getTargetsForMove(possibleMoves[j - 1].target, gameType, position)
+					  raw_targets.map(current_target => {
+						const target_index = current_target.index;
+						legal_targets[ultra_index][target_index] = 1
+					  });
+					}
+				  }
+		
+				});
+		
+				if (change) {
+					if (canDynamax) {
+						let canMove = range(1, active.maxMoves.maxMoves.length).filter(j => (
+						  // not disabled
+						  !active.maxMoves.maxMoves[j - 1].disabled
+						  // NOTE: we don't actually check for whether we have PP or not because the
+						  // simulator will mark the move as disabled if there is zero PP and there are
+						  // situations where we actually need to use a move with 0 PP (Gen 1 Wrap).
+						)).map(j => {
+						  const dyna_key = `dyna ${j}`
+						  const dyna_index = all_possible_actions.indexOf(dyna_key)
+						  legal_actions[dyna_index] = 1
+			
+						  const raw_targets = getTargetsForMove(active.maxMoves.maxMoves[j - 1].target, gameType, position)
+						  raw_targets.map(current_target => {
+							const target_index = current_target.index;
+							legal_targets[dyna_index][target_index] = 1
+						  });
+			
+						});
+					  }
+						if (canTerastallize) {
+							let canMove = range(1, active.moves.length).filter(j => (
+							// not disabled
+							!active.moves[j - 1].disabled
+							// NOTE: we don't actually check for whether we have PP or not because the
+							// simulator will mark the move as disabled if there is zero PP and there are
+							// situations where we actually need to use a move with 0 PP (Gen 1 Wrap).
+							)).map(j => {
+							const tera_key = `tera ${j}`
+							const tera_index = all_possible_actions.indexOf(tera_key)
+							legal_actions[tera_index] = 1
+				
+							const raw_targets = getTargetsForMove(active.moves[j - 1].target, gameType, position)
+							raw_targets.map(current_target => {
+								const target_index = current_target.index;
+								legal_targets[tera_index][target_index] = 1
+							});
+				
+							});
+						}
+					}
+
+
+				
+				if (canZMove) {
+							canMove.push(...range(1, active.canZMove.length)
+								.filter(j => active.canZMove[j - 1])
+								.map(j => {
+					  const zmove_key = `zmove ${j}`
+					  const zmove_index = all_possible_actions.indexOf(zmove_key)
+					  legal_actions[zmove_index] = 1
+		
+		
+					  const raw_targets = getTargetsForMove(active.canZMove[j - 1].target, gameType, position)
+					  raw_targets.map(current_target => {
+						const target_index = current_target.index;
+						legal_targets[zmove_index][target_index] = 1
+					  });
+		
+					}));
+						}
+		
+				const canSwitch = range(1, 6).filter(i => (
+				  pokemon[i - 1] &&
+				  !pokemon[0].trapped &&
+				  !pokemon[1].trapped &&
+				  // not active
+				  !pokemon[i - 1].active &&
+				  // not chosen for a simultaneous switch
+				  !chosen.includes(i) &&
+				  // not fainted
+				  !pokemon[i - 1].condition.endsWith(` fnt`)
+				));
+		
+				for (const switch_pos of canSwitch){
+				  const switch_key = `switch ${switch_pos}`
+				  const switch_index = all_possible_actions.indexOf(switch_key)
+				  legal_actions[switch_index] = 1
+				  var raw_switch_targets = getSwitchTargets(gameType)
+		
+				  raw_switch_targets.map(current_target => {
+					const target_index = current_target.index;
+					legal_targets[switch_index][target_index] = 1
+				  });
+				}
+		
+				valid_moves[position] = legal_actions
+				valid_targets[position] = legal_targets
+				positionIndex++;
+		
+		//        const switches = active.trapped ? [] : canSwitch;
+			  });
+			} else {
+			  // team preview?
+		//      this.choose(this.chooseTeamPreview(request.side.pokemon));
+			}
+			return [valid_moves, valid_targets]
+		
+		  }
+		
+		  emitObservation(observation: AnyObject) {
+				this.battle.send('sideupdate', `${this.id}\n|observation|${JSON.stringify(observation)}`);
+			}
+		
+		  emitEncoders(){
+			this.battle.send('encoders', `${this.id}\n|encoders|${JSON.stringify(BaseEncoder.getEncodersConfig())}`);
+		  }
+
+
 	emitRequest(update: AnyObject) {
 		this.battle.send('sideupdate', `${this.id}\n|request|${JSON.stringify(update)}`);
 		this.activeRequest = update;
@@ -595,6 +1047,15 @@ export class Side {
 				});
 				const status = this.emitChoiceError(`Can't move: ${pokemon.name}'s ${move.name} is disabled`, includeRequest);
 				if (includeRequest) this.emitRequest(this.activeRequest!);
+				if (includeRequest) {
+					var observationsSet = this.battle.getObservationForSide(this.id, this.name, this.activeRequest!)
+					this.emitObservation(observationsSet)
+					this.emitRequest(this.activeRequest!);
+				}else{
+					var observationsSet = this.battle.getObservationForSide(this.id, this.name, this.activeRequest!)
+					this.emitObservation(observationsSet)
+					this.emitRequest(this.activeRequest!);
+				}
 				return status;
 			}
 			// The chosen move is valid yay
@@ -773,8 +1234,18 @@ export class Side {
 					return updated;
 				});
 				const status = this.emitChoiceError(`Can't switch: The active Pokémon is trapped`, includeRequest);
-				if (includeRequest) this.emitRequest(this.activeRequest!);
-				return status;
+				if (includeRequest) {
+		//          console.log('ads3121sqwa e22e1')
+					var observationsSet = this.battle.getObservationForSide(this.id, this.name, this.activeRequest!)
+					this.emitObservation(observationsSet)
+					this.emitRequest(this.activeRequest!);
+				}else{
+		//          console.log('ads3121sqwa')
+					var observationsSet = this.battle.getObservationForSide(this.id, this.name, this.activeRequest!)
+					this.emitObservation(observationsSet)
+					this.emitRequest(this.activeRequest!);
+				}
+									return status;
 			} else if (pokemon.maybeTrapped) {
 				this.choice.cantUndo = this.choice.cantUndo || pokemon.isLastActive();
 			}

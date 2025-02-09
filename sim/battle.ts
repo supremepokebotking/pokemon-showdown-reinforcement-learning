@@ -24,6 +24,9 @@ import {State} from './state';
 import {BattleQueue, Action} from './battle-queue';
 import {BattleActions} from './battle-actions';
 import {Utils} from '../lib/utils';
+import {BaseEncoder} from './pokemon-label-encoders';
+import {PokeStateTracker} from './poke-state-tracker';
+
 declare const __version: any;
 
 export type ChannelID = 0 | 1 | 2 | 3 | 4;
@@ -134,6 +137,11 @@ export class Battle {
 	reportExactHP: boolean;
 	reportPercentages: boolean;
 	supportCancel: boolean;
+	stateTracker:PokeStateTracker = new PokeStateTracker()
+	p1StateTracker:PokeStateTracker = new PokeStateTracker()
+	p2StateTracker:PokeStateTracker = new PokeStateTracker()
+	CompleteStateTracker:PokeStateTracker = new PokeStateTracker()
+
 
 	actions: BattleActions;
 	queue: BattleQueue;
@@ -1325,7 +1333,15 @@ export class Battle {
 
 		const requests = this.getRequests(type);
 		for (let i = 0; i < this.sides.length; i++) {
+			var observationsSet = this.getObservationForSide(this.sides[i].id, this.sides[i].name, requests[i])
+			this.sides[i].emitObservation(observationsSet)
 			this.sides[i].emitRequest(requests[i]);
+
+			// if wait request, do not clear rewards
+			if(requests[i].wait){
+			}else{
+				this.stateTracker.clearReward(this.sides[i].id);
+			}
 		}
 
 		if (this.sides.every(side => side.isChoiceDone())) {
@@ -1333,7 +1349,130 @@ export class Battle {
 		}
 	}
 
-	clearRequest() {
+/*
+>start {"formatid":"gen9randombattle"}
+>player p1 {"name":"Alice"}
+>player p2 {"name":"Bob"}
+*/
+
+getObservationForSide(sideId, sideName, request) {
+	var seen_details = this.stateTracker.p1_seen_details;
+	if (sideId.includes('p2')){
+	  seen_details = this.stateTracker.p2_seen_details;
+	}
+
+	var neededObservations = []
+	var observationsSet = {}
+	if ((this.gen === 8 || this.gen === 9) && this.stateTracker.gametype === 'singles'){
+	  // doubles are gen 5/6
+	  neededObservations.push('singles')
+	}
+
+	for (const observation of neededObservations){
+	  var full_category_encodes = []
+	  var full_non_category_encodes = []
+	  var full_raw_category_encodes = []
+	  var full_raw_non_category_encodes = []
+	  var full_label_category_encodes = []
+	  var full_label_non_category_encodes = []
+
+	  var is_p1_perspective = sideId === 'p1'
+	  var [field_cat_encode, field_non_cat_encode] = this.stateTracker.encode(observation, is_p1_perspective)
+	  var [raw_field_cat_encode, raw_field_non_cat_encode] = this.stateTracker.rawObservationEncode(observation, is_p1_perspective)
+	  var [raw_labels_field_cat_encode, raw_labels_field_non_cat_encode] = this.stateTracker.rawObservationLabel(observation)
+
+	  full_category_encodes = full_category_encodes.concat(field_cat_encode)
+	  full_non_category_encodes = full_non_category_encodes.concat(field_non_cat_encode)
+	  full_raw_category_encodes = full_raw_category_encodes.concat(raw_field_cat_encode)
+	  full_raw_non_category_encodes = full_raw_non_category_encodes.concat(raw_field_non_cat_encode)
+	  full_label_category_encodes = full_label_category_encodes.concat(raw_labels_field_cat_encode)
+	  full_label_non_category_encodes = full_label_non_category_encodes.concat(raw_labels_field_non_cat_encode)
+
+
+	  var seen_details = this.stateTracker.p1_seen_details;
+	  var other_seen_details = this.stateTracker.p2_seen_details;
+	  var other_side = this.p2;
+	  var side_to_use = this.p1;
+	  var reward = this.stateTracker.newGetRewards(sideId);
+	  var reward_tracker = this.stateTracker.getRewardTracker(sideId);
+	  var transcript = this.stateTracker.getTranscript(sideId);
+	  var request_status = `wait: ${request.wait}, forceSwitch: ${request.forceSwitch}, active: ${request.active}`
+	  this.stateTracker.logs.push(request_status)
+	  if (sideId.includes('p2')){
+		seen_details = this.stateTracker.p2_seen_details;
+		other_seen_details = this.stateTracker.p1_seen_details;
+		other_side = this.p1;
+		side_to_use = this.p2;
+	  }
+	  var [cat_encodes, raw_encodes] = side_to_use.getSideEncoding(true, seen_details);
+	  var [other_cat_encodes, other_raw_encodes] = other_side.getSideEncoding(false, other_seen_details);
+	  var [label_cat_encodes, label_raw_encodes] = side_to_use.getEncodingPokemonLabels();
+
+	  full_category_encodes = full_category_encodes.concat(cat_encodes)
+	  full_category_encodes = full_category_encodes.concat(other_cat_encodes)
+	  full_non_category_encodes = full_non_category_encodes.concat(raw_encodes)
+	  full_non_category_encodes = full_non_category_encodes.concat(other_raw_encodes)
+
+	  var full_observation = full_category_encodes.concat(full_non_category_encodes)
+
+	  var obs_key = `${this.gen}_${observation}`
+	  var [valid_moves, valid_targets] = side_to_use.get_valid_moves(request, this.gen, observation)
+
+	  var [raw_cat_encodes, raw_non_cat_encodes] = side_to_use.getRawObservationSideEncoding(true, seen_details);
+	  var [raw_other_cat_encodes, raw_other_non_cat_encodes] = other_side.getRawObservationSideEncoding(false, other_seen_details);
+
+	  full_raw_category_encodes = full_raw_category_encodes.concat(raw_cat_encodes)
+	  full_raw_category_encodes = full_raw_category_encodes.concat(raw_other_cat_encodes)
+	  full_raw_non_category_encodes = full_raw_non_category_encodes.concat(raw_non_cat_encodes)
+	  full_raw_non_category_encodes = full_raw_non_category_encodes.concat(raw_other_non_cat_encodes)
+	  var full_raw_observation = full_raw_category_encodes.concat(full_raw_non_category_encodes)
+
+	  var [raw_labels_pokemon_cat_encode, raw_labels_pokemon_non_cat_encode] = side_to_use.getEncodingPokemonLabels()
+	  full_label_category_encodes = full_label_category_encodes.concat(raw_labels_pokemon_cat_encode)
+	  full_label_non_category_encodes = full_label_non_category_encodes.concat(raw_labels_pokemon_non_cat_encode)
+	  var full_labels_observation = full_label_category_encodes.concat(full_label_non_category_encodes)
+
+	  observationsSet[obs_key] = {
+		'gen': this.gen,
+		'categoryLength': full_raw_category_encodes.length,
+		'gameType': observation,
+		'observation': full_observation,
+		'raw_observation': full_raw_observation,
+		'raw_labels': full_labels_observation,
+		'valid_moves': valid_moves,
+		'valid_targets': valid_targets,
+		'reward': reward,
+		'reward_tracker': reward_tracker,
+		'request_status': request_status,
+		'transcript': transcript,
+		'id': sideId,
+		'name': sideName,
+	  }
+	}
+
+	return observationsSet
+	}
+
+  setRewardConfig(reward_config){
+	this.stateTracker.setRewardConfig(reward_config);
+  }
+
+  setBonusRewardConfig(bonus_reward_config){
+	this.stateTracker.setBonusRewardConfig(bonus_reward_config);
+  }
+
+  sendEndOfMatchInformation(){
+	this.sendEncoderInformation()
+	//unregistered tags
+}
+
+  sendEncoderInformation(){
+	for (let i = 0; i < this.sides.length; i++) {
+	  this.sides[i].emitEncoders()
+		}
+}
+  
+clearRequest() {
 		this.requestState = '';
 		for (const side of this.sides) {
 			side.activeRequest = null;
@@ -2648,8 +2787,16 @@ export class Battle {
 		}
 
 		case 'move':
+			var side = action.side.id
+			if (!action.side && action.pokemon) {
+				side = action.pokemon.side.id
+			}
+			//console.log("JUNK_LOG: move look at me: " + side)
+			//console.log("JUNK_LOG: move look at me action: " + action)
+
 			if (!action.pokemon.isActive) return false;
 			if (action.pokemon.fainted) return false;
+			this.stateTracker.applyAttackReward(side)
 			this.actions.runMove(action.move, action.pokemon, action.targetLoc, {
 				sourceEffect: action.sourceEffect, zMove: action.zmove,
 				maxMove: action.maxMove, originalTarget: action.originalTarget,
@@ -2705,6 +2852,16 @@ export class Battle {
 			return;
 		case 'instaswitch':
 		case 'switch':
+			var switch_side = action.side.id
+			if (!action.side && action.pokemon) {
+				switch_side = action.pokemon.side.id
+			}
+			//console.log("switch look at me: " + side)
+			//console.log("switch look at me target: " + action.target)	  
+
+			//      this.stateTracker.clearReward(switch_side);
+			this.stateTracker.applySwitchPenalty(switch_side)
+
 			if (action.choice === 'switch' && action.pokemon.status) {
 				this.singleEvent('CheckShow', this.dex.abilities.getByID('naturalcure' as ID), null, action.pokemon);
 			}
@@ -2898,6 +3055,11 @@ export class Battle {
 		this.endTurn();
 		this.midTurn = false;
 		this.queue.clear();
+
+		if(this.turn > 1){
+			this.stateTracker.log_end_of_turn_metrics()
+		}
+		this.stateTracker.reset_for_turn()
 	}
 
 	/**
@@ -3023,6 +3185,7 @@ export class Battle {
 	add(...parts: (Part | (() => {side: SideID, secret: string, shared: string}))[]) {
 		if (!parts.some(part => typeof part === 'function')) {
 			this.log.push(`|${parts.join('|')}`);
+			this.stateTracker.process_message(`|${parts.join('|')}`, this.turn)
 			return;
 		}
 
@@ -3048,6 +3211,7 @@ export class Battle {
 	addMove(...args: (string | number | Function | AnyObject)[]) {
 		this.lastMoveLine = this.log.length;
 		this.log.push(`|${args.join('|')}`);
+		this.stateTracker.process_message(`|${args.join('|')}`, this.turn)
 	}
 
 	// eslint-disable-next-line @typescript-eslint/ban-types
@@ -3227,6 +3391,12 @@ export class Battle {
 				delete log.p4;
 				delete log.p4team;
 			}
+			//      console.log('endy', JSON.stringify(this.stateTracker.sessionMetrics.getSerializedMetrics()))
+			this.send('encoders', `${this.id}\n|encoders|${JSON.stringify(BaseEncoder.getEncodersConfig())}`);
+			this.send('session_metrics', `${this.id}\n|session_metrics|${JSON.stringify(this.stateTracker.sessionMetrics.getSerializedMetrics())}`);
+			this.send('logs', `${this.id}\n|logs|${JSON.stringify(this.stateTracker.logs)}`)
+			this.send('unprocessed_events', `${this.id}\n|unprocessed_events|${JSON.stringify(this.stateTracker.unprocessed_events)}`)
+
 			this.send('end', JSON.stringify(log));
 			this.sentEnd = true;
 		}

@@ -7,6 +7,7 @@
 
 import {State} from './state';
 import {toID} from './dex';
+import {BaseEncoder} from './pokemon-label-encoders';
 
 /** A Pokemon's move slot. */
 interface MoveSlot {
@@ -2189,4 +2190,541 @@ export class Pokemon {
 		(this as any).battle = null!;
 		(this as any).side = null!;
 	}
+
+
+
+
+
+
+	bool_to_int(value){
+		if (value){
+		  return 1
+		}
+		return 0
+	  }
+	
+	//https://github.com/smogon/pokemon-showdown/blob/6d341a1c8397c4700971ed56dd98768811c63a59/data/aliases.ts
+	
+	  checkFormIdForAliasName(formId){
+		if (formId in BaseEncoder.all_alias_names){
+		  const formName = BaseEncoder.all_alias_names[formId]
+		  return toID(formName)
+		}
+	
+		return formId
+	  }
+	
+	  getEncoding(fullObservation:Boolean, seen_data: AnyObject){
+		const max_hp = 600.0
+		const max_ev_iv_value = 400.0
+		const max_attack = 160.0
+	
+		var details = this.species;
+		var gender = this.gender
+		if (this.illusion && !fullObservation) {
+		  details = this.illusion.species;
+		  gender = this.illusion.gender
+		}
+	
+	
+		var element_2nd_type = 'Typeless'
+		if (details.types.length == 2){
+		  element_2nd_type = details.types[1]
+		}
+		let element_1st_type = details.types[0]
+	
+		let status = this.status
+	
+		var ability = this.ability
+		var item = this.item
+		var form = details.id
+	
+	
+		if(fullObservation){
+		  ability = this.ability
+		  item = this.item
+		  form = details.id
+		}else{
+		  ability = seen_data['ability']
+		  item = seen_data['item']
+		  form = seen_data['form']
+	
+		  // if seen_data not hidden, need to lookup ids
+		  if(ability !== 'hidden_ability'){
+			ability = toID(ability)
+		  }
+		  if(item !== 'hidden_item'){
+			item = toID(item)
+		  }
+		  if(form !== 'hidden_pokemon'){
+			form = toID(form)
+		  }
+		}
+	
+		form = this.checkFormIdForAliasName(form)
+	
+	
+		var raw_encode = [
+	
+		]
+	
+		if(fullObservation){
+		  let max_health = Math.min(this.baseMaxhp, max_hp)
+		  let atk = Math.min(this.baseStoredStats['atk'], max_ev_iv_value)
+		  let spatk = Math.min(this.baseStoredStats['spa'], max_ev_iv_value)
+		  let defense = Math.min(this.baseStoredStats['def'], max_ev_iv_value)
+		  let spdef = Math.min(this.baseStoredStats['spd'], max_ev_iv_value)
+		  let speed = Math.min(this.baseStoredStats['spe'], max_ev_iv_value)
+		  raw_encode.push(max_health / max_hp)
+		  raw_encode.push(atk / max_ev_iv_value)
+		  raw_encode.push(spatk / max_ev_iv_value)
+		  raw_encode.push(defense / max_ev_iv_value)
+		  raw_encode.push(spdef / max_ev_iv_value)
+		  raw_encode.push(speed / max_ev_iv_value)
+		}
+	
+		var category_encodes = [
+		  BaseEncoder.pokemonNamesLabelEncoder.transform([form]),     //# category
+		  BaseEncoder.statusLabelEncoder.transform([status]),   //# category
+		  BaseEncoder.typesLabelEncoder.transform([element_1st_type]),     //# category
+		  BaseEncoder.typesLabelEncoder.transform([element_2nd_type]),   //# category
+		  BaseEncoder.abilitiesLabelEncoder.transform([ability]),
+		  BaseEncoder.itemsLabelEncoder.transform([item]),
+		  BaseEncoder.gendersLabelEncoder.transform([gender]),
+		]
+	
+	
+		var health_ratio = 1
+		if (this.status == 'fnt'){
+		  health_ratio = 0
+		}else if(this.baseMaxhp > 0){
+		  health_ratio = this.hp / this.baseMaxhp
+		}
+	
+		var weight = details.weighthg
+		var level = this.level
+	
+		var max_weight = 600.0
+		weight = Math.min(weight, max_weight)
+		raw_encode = raw_encode.concat([
+			level / 100.00,
+			health_ratio,
+			weight/max_weight,
+		])
+	
+		let attack_category_encode = []
+		let attack_raw_encode = []
+	
+		var attackCount = 0;
+		if(fullObservation){
+		  for (const moveSlot of this.moveSlots) {
+			attackCount += 1;
+	
+			let attackData = this.battle.dex.moves.get(moveSlot.id)
+			attack_category_encode.push(BaseEncoder.attackNamesLabelEncoder.transform([attackData.id]))
+			attack_category_encode.push(BaseEncoder.typesLabelEncoder.transform([attackData.baseMoveType]))
+			attack_category_encode.push(BaseEncoder.categoriesLabelEncoder.transform([attackData.category]))
+	
+			let power = Math.min(attackData.basePower, max_attack)
+			attack_raw_encode.push(power / max_attack)
+			var accuracy = attackData.accuracy
+			if (attackData.accuracy == true){
+			  accuracy = 1
+			}
+			let used_pp = moveSlot.maxpp - moveSlot.pp
+			attack_raw_encode.push(accuracy)
+			attack_raw_encode.push(attackData.priority / 6.00)
+			attack_raw_encode.push(used_pp/(moveSlot.maxpp).toFixed(2))
+			attack_raw_encode.push(this.bool_to_int(moveSlot.disabled))
+	
+		  }
+	
+		  // place empty attacks here to fill void worororo
+		  for (var i = attackCount; i < 4; i++){
+			attack_category_encode.push(BaseEncoder.attackNamesLabelEncoder.transform(['empty']))
+			attack_category_encode.push(BaseEncoder.typesLabelEncoder.transform(['Typeless']))
+			attack_category_encode.push(BaseEncoder.categoriesLabelEncoder.transform(['Empty']))
+	
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+		  }
+		}else{
+	//      console.log('seen_data', seen_data)
+	//      const [key, value] of
+	//      for (const attack_details of seen_data['attacks']) {
+		  for (const [attack_name, used_pp] of Object.entries(seen_data['attacks'])) {
+	
+			// only consider currently available moves
+			for (const moveSlot of this.moveSlots) {
+			  let attackData = this.battle.dex.moves.get(moveSlot.id)
+			  if(attack_name === attackData.name){
+				attackCount += 1;
+				attack_category_encode.push(BaseEncoder.attackNamesLabelEncoder.transform([attackData.id]))
+				attack_category_encode.push(BaseEncoder.typesLabelEncoder.transform([attackData.baseMoveType]))
+				attack_category_encode.push(BaseEncoder.categoriesLabelEncoder.transform([attackData.category]))
+	
+				let power = Math.min(attackData.basePower, max_attack)
+				attack_raw_encode.push(power / max_attack)
+				var accuracy = attackData.accuracy
+				if (attackData.accuracy == true){
+				  accuracy = 1
+				}
+		//        let used_pp = attackData.pp - used_pp
+				attack_raw_encode.push(accuracy)
+				attack_raw_encode.push(attackData.priority / 6.00)
+				attack_raw_encode.push(used_pp/(attackData.pp).toFixed(2))
+				attack_raw_encode.push(this.bool_to_int(false))
+				break;
+			  }
+			}
+	
+		  }
+	
+		  // place empty attacks here to fill void worororo
+		  for (var i = attackCount; i < 4; i++){
+			attack_category_encode.push(BaseEncoder.attackNamesLabelEncoder.transform(['hidden']))
+			attack_category_encode.push(BaseEncoder.typesLabelEncoder.transform(['Typeless']))
+			attack_category_encode.push(BaseEncoder.categoriesLabelEncoder.transform(['Empty']))
+	
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+		  }
+		}
+	
+		category_encodes = category_encodes.concat(attack_category_encode).flat(1)
+		raw_encode = raw_encode.concat(attack_raw_encode).flat(1)
+	
+		return [category_encodes, raw_encode]
+	  }
+	
+	
+	  getRawObservationEncoding(fullObservation:Boolean, seen_data: AnyObject){
+		const max_hp = 600.0
+		const max_ev_iv_value = 400.0
+		const max_attack = 160.0
+	
+		var details = this.species;
+		var gender = this.gender
+		if (this.illusion && !fullObservation) {
+		  details = this.illusion.species;
+		  gender = this.illusion.gender
+		}
+	
+	
+		var element_2nd_type = 'Typeless'
+		if (details.types.length == 2){
+		  element_2nd_type = details.types[1]
+		}
+		let element_1st_type = details.types[0]
+	
+		let status = this.status
+	
+		var ability = this.ability
+		var item = this.item
+		var form = details.id
+	
+	
+		if(fullObservation){
+		  ability = this.ability
+		  item = this.item
+		  form = details.id
+		}else{
+		  ability = seen_data['ability']
+		  item = seen_data['item']
+		  form = seen_data['form']
+	
+		  // if seen_data not hidden, need to lookup ids
+		  if(ability !== 'hidden_ability'){
+			ability = toID(ability)
+		  }
+		  if(item !== 'hidden_item'){
+			item = toID(item)
+		  }
+		  if(form !== 'hidden_pokemon'){
+			form = toID(form)
+		  }
+		}
+		form = this.checkFormIdForAliasName(form)
+	
+	
+		var raw_encode = [
+	
+		]
+	
+		if(fullObservation){
+		  let max_health = Math.min(this.baseMaxhp, max_hp)
+		  let atk = Math.min(this.baseStoredStats['atk'], max_ev_iv_value)
+		  let spatk = Math.min(this.baseStoredStats['spa'], max_ev_iv_value)
+		  let defense = Math.min(this.baseStoredStats['def'], max_ev_iv_value)
+		  let spdef = Math.min(this.baseStoredStats['spd'], max_ev_iv_value)
+		  let speed = Math.min(this.baseStoredStats['spe'], max_ev_iv_value)
+		  raw_encode.push(max_health )
+		  raw_encode.push(atk )
+		  raw_encode.push(spatk )
+		  raw_encode.push(defense )
+		  raw_encode.push(spdef )
+		  raw_encode.push(speed )
+		}
+	
+		var category_encodes = [
+		  ([form]),     //# category
+		  ([status]),   //# category
+		  ([element_1st_type]),     //# category
+		  ([element_2nd_type]),   //# category
+		  ([ability]),
+		  ([item]),
+		  ([gender]),
+		]
+	
+	
+		var health_ratio = this.hp
+		var weight = details.weighthg
+		var level = this.level
+	
+		var max_weight = 600.0
+		weight = Math.min(weight, max_weight)
+		raw_encode = raw_encode.concat([
+			level,
+			health_ratio,
+			weight,
+		])
+	
+		let attack_category_encode = []
+		let attack_raw_encode = []
+	
+		var attackCount = 0;
+		if(fullObservation){
+		  for (const moveSlot of this.moveSlots) {
+			attackCount += 1;
+	
+			let attackData = this.battle.dex.moves.get(moveSlot.id)
+			attack_category_encode.push(([attackData.id]))
+			attack_category_encode.push(([attackData.baseMoveType]))
+			attack_category_encode.push(([attackData.category]))
+	
+			let power = Math.min(attackData.basePower, max_attack)
+			attack_raw_encode.push(power)
+	
+			let used_pp = moveSlot.maxpp - moveSlot.pp
+			attack_raw_encode.push(attackData.accuracy)
+			attack_raw_encode.push(attackData.priority)
+			attack_raw_encode.push(used_pp)
+			attack_raw_encode.push((moveSlot.disabled))
+	
+		  }
+	
+		  // place empty attacks here to fill void worororo
+		  for (var i = attackCount; i < 4; i++){
+			attack_category_encode.push((['empty']))
+			attack_category_encode.push((['Typeless']))
+			attack_category_encode.push((['Empty']))
+	
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+		  }
+		}else{
+		  // max moves / zmoves can exceed 4 slots
+		  for (const [attack_name, used_pp] of Object.entries(seen_data['attacks'])) {
+			// only consider currently available moves
+			for (const moveSlot of this.moveSlots) {
+			  let attackData = this.battle.dex.moves.get(moveSlot.id)
+			  if(attack_name === attackData.name){
+				attackCount += 1;
+				attack_category_encode.push(([attackData.id]))
+				attack_category_encode.push(([attackData.baseMoveType]))
+				attack_category_encode.push(([attackData.category]))
+	
+				attack_raw_encode.push(attackData.basePower)
+	
+				attack_raw_encode.push(attackData.accuracy)
+				attack_raw_encode.push(attackData.priority)
+				attack_raw_encode.push(used_pp)
+				attack_raw_encode.push((0))
+				break;
+			  }
+			}
+	
+	
+		  }
+	
+		  // place empty attacks here to fill void worororo
+		  for (var i = attackCount; i < 4; i++){
+			attack_category_encode.push((['hidden']))
+			attack_category_encode.push((['Typeless']))
+			attack_category_encode.push((['Empty']))
+	
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+			attack_raw_encode.push(0)
+		  }
+		}
+	
+		category_encodes = category_encodes.concat(attack_category_encode).flat(1)
+		raw_encode = raw_encode.concat(attack_raw_encode).flat(1)
+	
+		return [category_encodes, raw_encode]
+	  }
+	
+	  static getEmptyOrHiddenObservation(hidden:Boolean){
+	
+		var element_2nd_type = 'Typeless'
+		let element_1st_type = 'Typeless'
+	
+		let status = ''
+	
+		var ability = 'empty_ability'
+		var item = ''
+		var form = 'unregistered_pokemon'
+	
+		// if seen_data not hidden, need to lookup ids
+		if(hidden){
+		  ability = 'hidden_ability'
+		}
+		if(hidden){
+		  item = 'hidden_item'
+		}
+		if(hidden){
+		  form = 'hidden_pokemon'
+		}
+	
+		var raw_encode = [
+	
+		]
+	
+		var category_encodes = [
+		  BaseEncoder.pokemonNamesLabelEncoder.transform([form]),     //# category
+		  BaseEncoder.statusLabelEncoder.transform([status]),   //# category
+		  BaseEncoder.typesLabelEncoder.transform([element_1st_type]),     //# category
+		  BaseEncoder.typesLabelEncoder.transform([element_2nd_type]),   //# category
+		  BaseEncoder.abilitiesLabelEncoder.transform([ability]),
+		  BaseEncoder.itemsLabelEncoder.transform([item]),
+		  BaseEncoder.gendersLabelEncoder.transform(['N']),
+		]
+	
+		// empty pokemon are the players perspective
+		if(!hidden){
+		  raw_encode.push(0 )
+		  raw_encode.push(0 )
+		  raw_encode.push(0 )
+		  raw_encode.push(0 )
+		  raw_encode.push(0 )
+		  raw_encode.push(0 )
+		}
+	
+	
+		var health_ratio = 0
+		if (hidden){
+		  health_ratio = 1
+		}
+	
+		var weight = 0
+		var level = 0
+	
+		raw_encode = raw_encode.concat([
+			level,
+			health_ratio,
+			weight,
+		])
+	
+		let attack_category_encode = []
+		let attack_raw_encode = []
+	
+		var attackCount = 0;
+		// place empty attacks here to fill void worororo
+		for (var i = attackCount; i < 4; i++){
+		  if(hidden){
+			attack_category_encode.push(BaseEncoder.attackNamesLabelEncoder.transform(['hidden']))
+		  }else{
+			attack_category_encode.push(BaseEncoder.attackNamesLabelEncoder.transform(['empty']))
+		  }
+		  attack_category_encode.push(BaseEncoder.typesLabelEncoder.transform(['Typeless']))
+		  attack_category_encode.push(BaseEncoder.categoriesLabelEncoder.transform(['Empty']))
+	
+		  attack_raw_encode.push(0)
+		  attack_raw_encode.push(0)
+		  attack_raw_encode.push(0)
+		  attack_raw_encode.push(0)
+		  attack_raw_encode.push(0)
+		}
+	
+	
+		category_encodes = category_encodes.concat(attack_category_encode).flat(1)
+		raw_encode = raw_encode.concat(attack_raw_encode).flat(1)
+	
+	
+		return [category_encodes, raw_encode]
+	  }
+	
+	
+	  static rawVerifyPokemonLabels(is_p1_perspective:Boolean){
+		//# empty pokemon slot
+		//# max IV/EV stat
+	
+		var player_prefix = 'p2'
+		if (is_p1_perspective){
+		  player_prefix = 'p1'
+		}
+	
+		var category_labels = []
+		var raw_encode_labels = []
+	
+		for(var pokemon_index = 1; pokemon_index < 7; pokemon_index++){
+		  category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_form`)
+		  category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_status`)
+		  category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_element_1st_type` )
+		  category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_element_2nd_type`)
+		  category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_ability` )
+		  category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_item`)
+		  category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_gender`)
+	
+		  if(is_p1_perspective){
+			raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_max_health`)
+			raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_atk`)
+			raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_spatk`)
+			raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_defense`)
+			raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_spdef`)
+			raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_speed` )
+		  }
+	
+		  raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_level`)
+		  raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_health_ratio` )
+		  raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_weight`)
+	
+		  var attack_category_labels = []
+		  var attack_raw_encode_labels = []
+	
+		  for(var attack_index = 1; attack_index < 5; attack_index++){
+			attack_category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_id`)
+			attack_category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_element_type`)
+			attack_category_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_category` )
+	
+			attack_raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_power`)
+			attack_raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_accuracy` )
+			attack_raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_priority`)
+			attack_raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_used_pp` )
+			attack_raw_encode_labels.push(`${player_prefix}_pokemon_${pokemon_index}_attack_${attack_index}_disabled` )
+	
+		  }
+		  category_labels = category_labels.concat(attack_category_labels)
+		  raw_encode_labels = raw_encode_labels.concat(attack_raw_encode_labels)
+		}
+	
+		category_labels = category_labels.flat(1)
+		raw_encode_labels = raw_encode_labels.flat(1)
+	
+	
+		return [category_labels, raw_encode_labels]
+	  }
+	
 }
