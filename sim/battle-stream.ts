@@ -108,6 +108,14 @@ export class BattleStream extends Streams.ObjectReadWriteStream<string> {
 			if (this.debug) options.debug = true;
 			this.battle = new Battle(options);
 			break;
+		case 'reward':
+			const reward_config = JSON.parse(message);
+			this.battle!.setRewardConfig(reward_config);
+			break;
+		case 'bonus_reward':
+			const bonus_reward_config = JSON.parse(message);
+			this.battle!.setBonusRewardConfig(bonus_reward_config);
+			break;
 		case 'player':
 			const [slot, optionsText] = splitFirst(message, ' ');
 			this.battle!.setPlayer(slot as SideID, JSON.parse(optionsText));
