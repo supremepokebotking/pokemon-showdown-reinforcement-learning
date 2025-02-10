@@ -213,7 +213,8 @@ export class PokemonEncoder {
   populateTypes(){
     this.typesLabelEncoder = new LabelEncoder();
     this.allTypes = ['Bug', 'Dark', 'Dragon', 'Electric', 'Fairy', 'Fighting', 'Fire', 'Flying', 'Ghost',
-                'Grass', 'Ground', 'Ice', 'Normal', 'Poison', 'Psychic', 'Rock', 'Steel', 'Water', 'Typeless', 'Bird'];
+                'Grass', 'Ground', 'Ice', 'Normal', 'Poison', 'Psychic', 'Rock', 'Steel', 'Water', 'Typeless', 'Bird',
+			'Stellar'];
     this.typesLabelEncoder.fit(Array.from(this.allTypes))
   }
 
