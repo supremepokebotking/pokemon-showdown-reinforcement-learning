@@ -189,6 +189,8 @@ const METRICS_WITHOUT_PREFIX = ['turns', 'user_id', 'session_id', 'group_label',
 
 
 const DEFAULT_REWARD_CONFIG = {
+    'allow_other_player_to_affect_reward':false,
+    'reduce_negative_penalty_from_opponents_moves':false,
     'taking_too_long_penalty_100_turns':500,
     'win_reward': 100,
     'quick_match_under_30_turns': 20,
@@ -224,44 +226,168 @@ const DEFAULT_REWARD_CONFIG = {
     'illusion_broken':  15,
     'minor_switch':  5,
     'health_change_base':  1,
+    'other_health_change_base':  1,
+    'health_change_base_raw':  0,
+    'other_health_change_base_raw':  0,
+    "current_health":  0,
+    "other_current_health":  0,
+    "current_health_raw":  0,
+    "other_current_health_raw":  0,
 }
 
 const BASE_REWARD_TRACKER = {
-    'taking_too_long_penalty_100_turns':[],
-    'win_reward': [],
-    'quick_match_under_30_turns': [],
-    'attack_reward':   [],
-    'switch_penalty':  [],
-    'pokemon_damaged':  [],
-    'yawn_success':  [],
-    'attack_resisted':  [],
-    'attack_supereffective':  [],
-    'attack_immune':  [],
-    'confused_begin':  [],
-    'confused_end':  [],
-    'taunt_begin':  [],
-    'taunt_end':  [],
-    'item_knockedoffed':  [],
-    'attack_missed':  [],
-    'stat_modified':  [],
-    'damage_by_hazards_opponent_ability_or_items':  [],
-    'damage_by_own_item':  [],
-    'hazards_removed':  [],
-    'reflect_tailwind_etc_end':  [],
-    'hazards_and_safeguard_etc_start':  [],
-    'destiny_bond_start':  [],
-    'pokemon_heal':  [],
-    'terrain_weather_trigger':  [],
-    'pain_split':  [],
-    'status_start':  [],
-    'curestatus':  [],
-    'critical':  [],
-    'fainted':  [],
-    'protection_bonus': [],
-    'used_ability': [],
-    'illusion_broken':  [],
-    'minor_switch':  [],
-    'health_change_base': [],
+  'allow_other_player_to_affect_reward':[],
+  'reduce_negative_penalty_from_opponents_moves':[],
+  'taking_too_long_penalty_100_turns':[],
+  'win_reward': [],
+  'quick_match_under_30_turns': [],
+  'attack_reward':   [],
+  'switch_penalty':  [],
+  'pokemon_damaged':  [],
+  'yawn_success':  [],
+  'attack_resisted':  [],
+  'attack_supereffective':  [],
+  'attack_immune':  [],
+  'confused_begin':  [],
+  'confused_end':  [],
+  'taunt_begin':  [],
+  'taunt_end':  [],
+  'item_knockedoffed':  [],
+  'attack_missed':  [],
+  'stat_modified':  [],
+  'damage_by_hazards_opponent_ability_or_items':  [],
+  'damage_by_own_item':  [],
+  'hazards_removed':  [],
+  'reflect_tailwind_etc_end':  [],
+  'hazards_and_safeguard_etc_start':  [],
+  'destiny_bond_start':  [],
+  'pokemon_heal':  [],
+  'terrain_weather_trigger':  [],
+  'pain_split':  [],
+  'status_start':  [],
+  'curestatus':  [],
+  'critical':  [],
+  'fainted':  [],
+  'protection_bonus': [],
+  'used_ability': [],
+  'illusion_broken':  [],
+  'minor_switch':  [],
+  'health_change_base': [],
+  'other_health_change_base': [],
+  'health_change_base_raw': [],
+  'other_health_change_base_raw': [],
+  "current_health":  [],
+  "other_current_health":  [],
+  "current_health_raw":  [],
+  "other_current_health_raw":  [],
+}
+
+const BASELINE_REWARD_MODIFIER_CONFIG = {
+  'win_reward': {
+    'value': 100,
+  },
+  'quick_match_under_30_turns': {
+    'value': 20,
+  },
+  'attack_reward':  {
+    'value': 20,
+    'max_count': -1,
+  },
+  'switch_penalty':  {
+    'value': 20,
+    'max_count': -1,
+  },
+  'pokemon_damaged':  {
+    'value': 20,
+    'max_count': 1,
+  },
+  'yawn_success':  {
+    'value': 20,
+  },
+  'attack_resisted':  {
+    'value': 20,
+  },
+  'attack_supereffective':  {
+    'value': 20,
+  },
+  'attack_immune':  {
+    'value': 20,
+  },
+  'confused_begin':  {
+    'value': 20,
+  },
+  'confused_end':  {
+    'value': 20,
+  },
+  'taunt_begin':  {
+    'value': 20,
+  },
+  'taunt_end':  {
+    'value': 20,
+  },
+  'item_knockedoffed':  {
+    'value': 20,
+  },
+  'attack_missed':  {
+    'value': 20,
+  },
+  'stat_modified':  {
+    'value': 20,
+  },
+  'damage_by_hazards_opponent_ability_or_items':  {
+    'value': 20,
+  },
+  'damage_by_own_item':  {
+    'value': 20,
+  },
+  'hazards_removed':  {
+    'value': 20,
+  },
+  'reflect_tailwind_etc_end':  {
+    'value': 20,
+  },
+  'hazards_and_safeguard_etc_start':  {
+    'value': 20,
+  },
+  'destiny_bond_start':  {
+    'value': 20,
+  },
+  'pokemon_heal':  {
+    'value': 20,
+  },
+  'terrain_weather_trigger':  {
+    'value': 20,
+  },
+  'pain_split':  {
+    'value': 20,
+  },
+  'status_start':  {
+    'value': 20,
+  },
+  'curestatus':  {
+    'value': 20,
+  },
+  'critical':  {
+    'value': 20,
+  },
+  'fainted':  {
+    'value': 20,
+  },
+  'protection_bonus': {
+    'value': 20,
+  },
+  'used_ability': {
+    'value': 20,
+  },
+  'illusion_broken':  {
+    'value': 20,
+  },
+  'minor_switch':  {
+    'value': 20,
+  },
+  'health_change_base': {
+    'value': 20,
+  },
 }
 
 const DEFAULT_BONUS_REWARD_CONFIG = {
@@ -826,6 +952,7 @@ export class PokeStateTracker {
 
 
   constructor(){
+    this.processed_output = [];
     this.p1_transcript = '';
     this.p2_transcript = '';
     this.p1_kifu_transcript = ''
@@ -973,7 +1100,7 @@ export class PokeStateTracker {
     this.p1_selected = {'a':null, 'b':null, 'c':null}
     this.p2_selected = {'a':null, 'b':null, 'c':null}
     this.logs = []
-
+    this.punish_multiplier = 1;
   }
 
   getState(){
@@ -1051,6 +1178,13 @@ export class PokeStateTracker {
 
   setRewardConfig(reward_config){
     this.reward_config = reward_config
+    this.punish_multiplier = 0;
+    if(this.reward_config["allow_other_player_to_affect_reward"]){
+      this.punish_multiplier = 1;
+      if(this.reward_config["reduce_negative_penalty_from_opponents_moves"]){
+        this.punish_multiplier = 0.35;
+      }
+    }
   }
 
   setBonusRewardConfig(reward_bonus_config){
@@ -2013,17 +2147,29 @@ def process_boost_unboost(self, output, is_boost=True):
     //# if positive, player gains, enemy nothing.
 
     var health_reward = delta_change * this.reward_config['health_change_base']
-    // # lost life
+    if (is_player){
+      this.p1_rewards_tracker['health_change_base_raw'].push(delta_change)
+      this.p2_rewards_tracker['other_health_change_base_raw'].push(delta_change)
+      this.p1_rewards_tracker['current_health_raw'].push(health_ratio)
+      this.p2_rewards_tracker['other_current_health_raw'].push(health_ratio)
+    }else{
+      this.p1_rewards_tracker['other_health_change_base_raw'].push(delta_change)
+      this.p2_rewards_tracker['health_change_base_raw'].push(delta_change)
+      this.p1_rewards_tracker['other_current_health_raw'].push(health_ratio)
+      this.p2_rewards_tracker['current_health_raw'].push(health_ratio)
+    }
+
+  // # lost life
     if (delta_change < 0){
       if (is_player){
         this.p1_reward -= health_reward
-        this.p2_reward += health_reward
+        this.p2_reward += health_reward * this.punish_multiplier
       this.p1_rewards_tracker['health_change_base'].push(-health_reward)
-      this.p2_rewards_tracker['health_change_base'].push(health_reward)
+      this.p2_rewards_tracker['other_health_change_base'].push(health_reward)
       }else{
-        this.p1_reward += health_reward
+        this.p1_reward += health_reward  * this.punish_multiplier
         this.p2_reward -= health_reward
-      this.p1_rewards_tracker['health_change_base'].push(health_reward)
+      this.p1_rewards_tracker['other_health_change_base'].push(health_reward)
       this.p2_rewards_tracker['health_change_base'].push(-health_reward)
       }
     }else if (delta_change > 0){
@@ -2031,10 +2177,12 @@ def process_boost_unboost(self, output, is_boost=True):
       health_reward *= 0.75
       if (is_player){
         this.p1_reward += health_reward
-      this.p1_rewards_tracker['health_change_base'].push(health_reward)
+        this.p1_rewards_tracker['health_change_base'].push(health_reward)
+        this.p2_rewards_tracker['other_health_change_base'].push(health_reward)
       }else{
         this.p2_reward += health_reward
-      this.p1_rewards_tracker['health_change_base'].push(health_reward)
+        this.p1_rewards_tracker['other_health_change_base'].push(health_reward)
+        this.p2_rewards_tracker['health_change_base'].push(health_reward)
       }
     }
   }
@@ -2224,9 +2372,117 @@ def process_boost_unboost(self, output, is_boost=True):
       reward = this.p2_reward
     }
     reward = Math.min(Math.max(-MAX_REWARD, reward), MAX_REWARD)
+
+    max_reward_out_of_100 = 10
+
     return reward / MAX_REWARD
   }
 
+  getArrayLength(arr) {
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr.length;
+    } else {
+      return 0; // Or handle the case where the array is not defined or empty
+    }
+  }
+  
+  calculateMaxEarnableRewardOutOf100AndBonusMultiplier(configuration, tracker){
+
+    max_reward_out_of_100 = 10
+    max_bonus_multiplier = 1.0
+    if (this.getArrayLength(reward_tracker["winner"]) > 0){
+      max_reward_out_of_100 = Math.max(max_reward_out_of_100, 100)
+    }
+    if (this.getArrayLength(reward_tracker["attack_reward"]) > 0){
+      max_reward_out_of_100 = Math.max(max_reward_out_of_100, 12)
+    }
+    if (this.getArrayLength(reward_tracker["winner"]) > 0){
+      max_reward_out_of_100 = Math.max(max_reward_out_of_100, 100)
+    }
+
+  }
+  calculateMaxEarnableRewardOutOf100AndBonusMultiplier(configuration, tracker) {
+    var reward_tracker = this.p1_reward_tracker
+    if (player_side.includes('p2')){
+      reward = this.p2_reward
+      reward_tracker = this.p2_reward_tracker
+    }
+
+    let max_reward_out_of_100 = 10;
+    let max_bonus_multiplier = 1.0;
+  
+    // Loop through each condition in the configuration
+    for (let conditionName in configuration) {
+      const condition = configuration[conditionName];
+      const combinations = condition.combinations || [];
+      // Default to false if not provided
+      const requireAll = condition.require_all || false;
+      const conditionAmount = condition.amount || 0;
+      const conditionBonus = condition.bonus_multiplier || 1.0;
+      const minCount = condition.min_count || 0;
+      const maxCount = condition.max_count; // could be undefined
+      const valueRestrictions = condition.value_restrictions || {};
+  
+      let conditionMet = false;
+  
+      if (requireAll) {
+        // Every key must satisfy the count requirement.
+        conditionMet = true;
+        for (let key of combinations) {
+          let count = 0;
+          if (tracker[key] && Array.isArray(tracker[key])) {
+            const restrictions = valueRestrictions[key];
+            if (restrictions) {
+              // Count only values that satisfy min_value and/or max_value
+              for (let value of tracker[key]) {
+                if ((restrictions.min_value === undefined || value >= restrictions.min_value) &&
+                    (restrictions.max_value === undefined || value <= restrictions.max_value)) {
+                  count++;
+                }
+              }
+            } else {
+              count = tracker[key].length;
+            }
+          }
+          if (count < minCount || (maxCount !== undefined && count > maxCount)) {
+            conditionMet = false;
+            break;
+          }
+        }
+      } else {
+        // At least one key must satisfy the count requirement.
+        conditionMet = false;
+        for (let key of combinations) {
+          let count = 0;
+          if (tracker[key] && Array.isArray(tracker[key])) {
+            const restrictions = valueRestrictions[key];
+            if (restrictions) {
+              for (let value of tracker[key]) {
+                if ((restrictions.min_value === undefined || value >= restrictions.min_value) &&
+                    (restrictions.max_value === undefined || value <= restrictions.max_value)) {
+                  count++;
+                }
+              }
+            } else {
+              count = tracker[key].length;
+            }
+          }
+          if (count >= minCount && (maxCount === undefined || count <= maxCount)) {
+            conditionMet = true;
+            break;
+          }
+        }
+      }
+  
+      if (conditionMet) {
+        max_reward_out_of_100 = Math.max(max_reward_out_of_100, conditionAmount);
+        max_bonus_multiplier = Math.max(max_bonus_multiplier, conditionBonus);
+      }
+    }
+  
+    return { max_reward_out_of_100, max_bonus_multiplier };
+  }
+  
     //# clamp reward and normalize
   newGetRewards(player_side){
       if (this.p1_rewards_tracker === undefined || this.p2_rewards_tracker === undefined){
@@ -2254,6 +2510,94 @@ def process_boost_unboost(self, output, is_boost=True):
     }
     return reward_tracker
   }
+
+	calculateRewardsSlimmed(conditions, _p1Rewards, _p2Rewards, baseline) {
+    var p1Rewards = {};
+    var p2Rewards = {};
+
+    for (var key in _p1Rewards) {
+      if (_p1Rewards[key].length > 0) {
+        p1Rewards[key] = _p1Rewards[key];
+      }
+      if (_p2Rewards[key].length > 0) {
+        p2Rewards[key] = _p2Rewards[key];
+      }
+    }
+
+    const p1Multipliers = Object.fromEntries(Object.keys(p1Rewards).map(key => [key, 1]));
+    const p2Multipliers = Object.fromEntries(Object.keys(p2Rewards).map(key => [key, 1]));
+    const p1FixedValues = Object.fromEntries(Object.keys(p1Rewards).map(key => [key, 0]));
+    const p2FixedValues = Object.fromEntries(Object.keys(p2Rewards).map(key => [key, 0]));
+    const p1Transformations = [];
+    const p2Transformations = [];
+    let baselineMultiplier = 1;
+    let baselineValue = baseline;
+  
+    function conditionMet(playerRewards, key, condition, countCondition = null) {
+      if (!(key in playerRewards)) {
+        return false;
+      }
+      if (condition === "exists") {
+        return true;
+      }
+      if (countCondition) {
+        const [countType, countValue] = countCondition.split(' ');
+        const count = playerRewards[key].filter(value => 
+          ((value > 0 && condition === "positive") ||
+           (value < 0 && condition === "negative") ||
+           (value === 0 && condition === "is_zero"))).length;
+        return countType === "at least" ? count >= parseInt(countValue) :
+             countType === "exactly" ? count === parseInt(countValue) :
+             countType === "less than" ? count < parseInt(countValue) : false;
+      } else {
+        return playerRewards[key].some(value => 
+          (value > 0 && condition === "positive") ||
+          (value < 0 && condition === "negative") ||
+          (value === 0 && condition === "is_zero"));
+      }
+    }
+  
+    for (const [configName, config] of Object.entries(conditions)) {
+      if (Object.entries(config.keys).every(([key, info]) =>
+        conditionMet(info.other ? p2Rewards : p1Rewards, key, info.condition, info.count))) {
+        p1Transformations.push(configName);
+        for (const [key, info] of Object.entries(config.keys)) {
+          p1Multipliers[key] = Math.max(p1Multipliers[key], info.multiplier || 1);
+          p1FixedValues[key] = Math.max(p1FixedValues[key], info.fixed_value || 0);
+        }
+        baselineMultiplier = Math.max(baselineMultiplier, config.baseline_multiplier || 1);
+        baselineValue = Math.max(baselineValue, config.baseline_value || baseline);
+      }
+      if (Object.entries(config.keys).every(([key, info]) =>
+        conditionMet(info.other ? p1Rewards : p2Rewards, key, info.condition, info.count))) {
+        p2Transformations.push(configName);
+        for (const [key, info] of Object.entries(config.keys)) {
+          p2Multipliers[key] = Math.max(p2Multipliers[key], info.multiplier || 1);
+          p2FixedValues[key] = Math.max(p2FixedValues[key], info.fixed_value || 0);
+        }
+        baselineMultiplier = Math.max(baselineMultiplier, config.baseline_multiplier || 1);
+        baselineValue = Math.max(baselineValue, config.baseline_value || baseline);
+      }
+    }
+  
+    const finalBaseline = Math.max(baseline * baselineMultiplier, baselineValue);
+  
+    var p1Sum = Object.entries(p1Rewards).reduce((sum, [key, valueList]) =>
+      sum + valueList.reduce((innerSum, value) =>
+        innerSum + Math.max(value * p1Multipliers[key], p1FixedValues[key]), 0), 0);
+    var p2Sum = Object.entries(p2Rewards).reduce((sum, [key, valueList]) =>
+      sum + valueList.reduce((innerSum, value) =>
+        innerSum + Math.max(value * p2Multipliers[key], p2FixedValues[key]), 0), 0);
+  
+    p1Sum = Math.min(Math.max(-finalBaseline, p1Sum), finalBaseline)
+    p2Sum = Math.min(Math.max(-finalBaseline, p2Sum), finalBaseline)
+    const p1Normalized = p1Sum / finalBaseline;
+    const p2Normalized = p2Sum / finalBaseline;
+
+    return [p1Normalized, p2Normalized, p1Transformations, p2Transformations];
+  }
+  
+
 
 	calculateRewards(conditions, _p1Rewards, _p2Rewards, baseline) {
     var p1Rewards = {};
@@ -2393,6 +2737,15 @@ def process_boost_unboost(self, output, is_boost=True):
     this.p2_transcript = ''
   }
 
+  // just reset on p1
+  reset_processed_output(){
+    this.processed_output = []
+  }
+
+  append_processed_output(output){
+      this.processed_output.push(output)
+  }
+
   append_to_transcript(message){
     message = message.trim()
     if (message === ''){
@@ -2450,16 +2803,17 @@ def process_boost_unboost(self, output, is_boost=True):
       var [is_player_1, pkmn, position] = this.get_player_pkmn_position(output)
       var health_status = output.split('|')[3]
       if (is_player_1){
-        this.p1_reward -= this.reward_config['pokemon_damaged']
-        this.p1_rewards_tracker['pokemon_damaged'].push(-this.reward_config['pokemon_damaged'])
+        // want more weight assigned to damage dealt than received if multiplier set
+        this.p1_reward -= this.reward_config['pokemon_damaged'] * this.punish_multiplier
+        this.p1_rewards_tracker['pokemon_damaged'].push(-this.reward_config['pokemon_damaged'] * this.punish_multiplier)
         this.p2_reward += this.reward_config['pokemon_damaged']
         this.p2_rewards_tracker['pokemon_damaged'].push(this.reward_config['pokemon_damaged'])
         message = `_p1_${pkmn} hurt by attack`
 
       }else{
         metrics_prefix = 'p2'
-        this.p2_reward -= this.reward_config['pokemon_damaged']
-        this.p2_rewards_tracker['pokemon_damaged'].push(-this.reward_config['pokemon_damaged'])
+        this.p2_reward -= this.reward_config['pokemon_damaged'] * this.punish_multiplier
+        this.p2_rewards_tracker['pokemon_damaged'].push(-this.reward_config['pokemon_damaged'] * this.punish_multiplier)
         this.p1_reward += this.reward_config['pokemon_damaged']
         this.p1_rewards_tracker['pokemon_damaged'].push(this.reward_config['pokemon_damaged'])
         message = `_p2_${pkmn} hurt by attack`
@@ -2691,16 +3045,16 @@ def process_boost_unboost(self, output, is_boost=True):
       if (is_player_1){
         this.p1_effective[position] += -1
         this.p1_reward += this.reward_config['attack_resisted']
-        this.p2_reward -= this.reward_config['attack_resisted']
+        this.p2_reward -= this.reward_config['attack_resisted'] * this.punish_multiplier
         this.p1_rewards_tracker['attack_resisted'].push(this.reward_config['attack_resisted'])
-        this.p2_rewards_tracker['attack_resisted'].push(-this.reward_config['attack_resisted'])
+        this.p2_rewards_tracker['attack_resisted'].push(-this.reward_config['attack_resisted'] * this.punish_multiplier)
         message = `_p1_${pkmn} resisted`
       }else{
         metrics_prefix = 'p2'
         this.p2_effective[position] += -1
         this.p2_reward += this.reward_config['attack_resisted']
-        this.p1_reward -= this.reward_config['attack_resisted']
-        this.p1_rewards_tracker['attack_resisted'].push(-this.reward_config['attack_resisted'])
+        this.p1_reward -= this.reward_config['attack_resisted'] * this.punish_multiplier
+        this.p1_rewards_tracker['attack_resisted'].push(-this.reward_config['attack_resisted'] * this.punish_multiplier)
         this.p2_rewards_tracker['attack_resisted'].push(this.reward_config['attack_resisted'])
         message = `_p2_${pkmn} resisted`
       }
@@ -2717,15 +3071,15 @@ def process_boost_unboost(self, output, is_boost=True):
       if (is_player_1){
         this.p1_effective[position] += 1
         this.p1_reward -= this.reward_config['attack_supereffective']
-        this.p2_reward += this.reward_config['attack_supereffective']
+        this.p2_reward += this.reward_config['attack_supereffective'] * this.punish_multiplier
         this.p1_rewards_tracker['attack_supereffective'].push(-this.reward_config['attack_supereffective'])
-        this.p2_rewards_tracker['attack_supereffective'].push(this.reward_config['attack_supereffective'])
+        this.p2_rewards_tracker['attack_supereffective'].push(this.reward_config['attack_supereffective'] * this.punish_multiplier)
       }else{
         metrics_prefix = 'p2'
         this.p2_effective[position] += 1
         this.p2_reward -= this.reward_config['attack_supereffective']
-        this.p1_reward += this.reward_config['attack_supereffective']
-        this.p1_rewards_tracker['attack_supereffective'].push(this.reward_config['attack_supereffective'])
+        this.p1_reward += this.reward_config['attack_supereffective'] * this.punish_multiplier
+        this.p1_rewards_tracker['attack_supereffective'].push(this.reward_config['attack_supereffective'] * this.punish_multiplier)
         this.p2_rewards_tracker['attack_supereffective'].push(-this.reward_config['attack_supereffective'])
       }
       message = 'attack was super effective'
@@ -2742,9 +3096,9 @@ def process_boost_unboost(self, output, is_boost=True):
       if (is_player_1){
         this.p1_effective[position] += -2
         this.p1_reward += this.reward_config['attack_immune']
-        this.p2_reward -= this.reward_config['attack_immune']
+        this.p2_reward -= this.reward_config['attack_immune'] * this.punish_multiplier
         this.p1_rewards_tracker['attack_immune'].push(this.reward_config['attack_immune'])
-        this.p2_rewards_tracker['attack_immune'].push(-this.reward_config['attack_immune'])
+        this.p2_rewards_tracker['attack_immune'].push(-this.reward_config['attack_immune'] * this.punish_multiplier)
         message = `doesnt affect _p1_${pkmn}`
         this.p2_move_succeeded[position] = false
       }else{
@@ -2752,8 +3106,8 @@ def process_boost_unboost(self, output, is_boost=True):
         metrics_prefix = 'p2'
         this.p2_effective[position] += -2
         this.p2_reward += this.reward_config['attack_immune']
-        this.p1_reward -= this.reward_config['attack_immune']
-        this.p1_rewards_tracker['attack_immune'].push(-this.reward_config['attack_immune'])
+        this.p1_reward -= this.reward_config['attack_immune'] * this.punish_multiplier
+        this.p1_rewards_tracker['attack_immune'].push(-this.reward_config['attack_immune'] * this.punish_multiplier)
         this.p2_rewards_tracker['attack_immune'].push(this.reward_config['attack_immune'])
         message = `doesnt affect _p2_${pkmn}`
       }
@@ -2842,17 +3196,17 @@ def process_boost_unboost(self, output, is_boost=True):
       var [is_player_1, pkmn, position] = this.get_player_pkmn_position(output)
       var remove_item = output.split('|')[3]
       if (is_player_1){
-        this.p1_reward -= this.reward_config['item_knockedoffed']
+        this.p1_reward -= this.reward_config['item_knockedoffed'] * this.punish_multiplier
         this.p2_reward += this.reward_config['item_knockedoffed']
-        this.p1_rewards_tracker['item_knockedoffed'].push(-this.reward_config['item_knockedoffed'])
+        this.p1_rewards_tracker['item_knockedoffed'].push(-this.reward_config['item_knockedoffed'] * this.punish_multiplier)
         this.p2_rewards_tracker['item_knockedoffed'].push(this.reward_config['item_knockedoffed'])
         message = `_p1_${pkmn} item knocked off`
       }else{
         metrics_prefix = 'p2'
-        this.p2_reward -= this.reward_config['item_knockedoffed']
+        this.p2_reward -= this.reward_config['item_knockedoffed'] * this.punish_multiplier
         this.p1_reward += this.reward_config['item_knockedoffed']
         this.p1_rewards_tracker['item_knockedoffed'].push(this.reward_config['item_knockedoffed'])
-        this.p2_rewards_tracker['item_knockedoffed'].push(-this.reward_config['item_knockedoffed'])
+        this.p2_rewards_tracker['item_knockedoffed'].push(-this.reward_config['item_knockedoffed'] * this.punish_multiplier)
         message = `_p2_${pkmn} item knocked off`
       }
       var no_item = ''
@@ -2944,16 +3298,16 @@ def process_boost_unboost(self, output, is_boost=True):
       message_was_processed = true
       var [is_player_1, pkmn, position] = this.get_player_pkmn_position(output)
       if (is_player_1){
-        this.p1_reward -= this.reward_config['stat_modified']
+        this.p1_reward -= this.reward_config['stat_modified'] * this.punish_multiplier
         this.p2_reward += this.reward_config['stat_modified']
-        this.p1_rewards_tracker['stat_modified'].push(-this.reward_config['stat_modified'])
+        this.p1_rewards_tracker['stat_modified'].push(-this.reward_config['stat_modified'] * this.punish_multiplier)
         this.p2_rewards_tracker['stat_modified'].push(this.reward_config['stat_modified'])
         message = `_p1_${pkmn} slowed down`
       }else{
         this.p1_reward += this.reward_config['stat_modified']
-        this.p2_reward -= this.reward_config['stat_modified']
+        this.p2_reward -= this.reward_config['stat_modified'] * this.punish_multiplier
         this.p1_rewards_tracker['stat_modified'].push(this.reward_config['stat_modified'])
-        this.p2_rewards_tracker['stat_modified'].push(-this.reward_config['stat_modified'])
+        this.p2_rewards_tracker['stat_modified'].push(-this.reward_config['stat_modified'] * this.punish_multiplier)
         message = `_p2_${pkmn} slowed down`
         metrics_prefix = 'p2'
       }
@@ -2961,22 +3315,40 @@ def process_boost_unboost(self, output, is_boost=True):
       metric_items.push([metrics_prefix, REGEX_TO_METRICS_KEY_MAPPING['slowed_by_web'], pkmn_form, METRIC_TYPES.APPEND])
     }
 
-    if (output.search(spike_damage_regex)  !== -1|| output.search(stealthrock_damage_regex) !== -1 || output.search(opponent_ability_damage_regex) !== -1 || output.search(item_damage_from_opponent_regex) !== -1) {
+    if( (output.search(spike_damage_regex)  !== -1|| output.search(stealthrock_damage_regex) !== -1 || output.search(opponent_ability_damage_regex) !== -1 || output.search(item_damage_from_opponent_regex) !== -1) && output.includes('100')) {
       //# Damage dealt by opponent hazards/items/abilities
       message_was_processed = true
       var [is_player_1, pkmn, position] = this.get_player_pkmn_position(output)
       if (is_player_1){
         this.p1_reward -= this.reward_config['damage_by_hazards_opponent_ability_or_items']
-        this.p2_reward += this.reward_config['damage_by_hazards_opponent_ability_or_items']
+        this.p2_reward += this.reward_config['damage_by_hazards_opponent_ability_or_items'] * this.punish_multiplier
         this.p1_rewards_tracker['damage_by_hazards_opponent_ability_or_items'].push(-this.reward_config['damage_by_hazards_opponent_ability_or_items'])
-        this.p2_rewards_tracker['damage_by_hazards_opponent_ability_or_items'].push(this.reward_config['damage_by_hazards_opponent_ability_or_items'])
+        this.p2_rewards_tracker['damage_by_hazards_opponent_ability_or_items'].push(this.reward_config['damage_by_hazards_opponent_ability_or_items'] * this.punish_multiplier)
         message = `_p1_${pkmn} hurt by spikes`
+        if(output.search(stealthrock_damage_regex)){
+          message = `_p1_${pkmn} hurt by rocks`
+        }
+        if(output.search(opponent_ability_damage_regex)){
+          message = `_p1_${pkmn} hurt by ability`
+        }
+        if(output.search(item_damage_from_opponent_regex)){
+          message = `_p1_${pkmn} hurt by item damage`
+        }
       }else{
-        this.p1_reward += this.reward_config['damage_by_hazards_opponent_ability_or_items']
+        this.p1_reward += this.reward_config['damage_by_hazards_opponent_ability_or_items'] * this.punish_multiplier
         this.p2_reward -= this.reward_config['damage_by_hazards_opponent_ability_or_items']
-        this.p1_rewards_tracker['damage_by_hazards_opponent_ability_or_items'].push(this.reward_config['damage_by_hazards_opponent_ability_or_items'])
+        this.p1_rewards_tracker['damage_by_hazards_opponent_ability_or_items'].push(this.reward_config['damage_by_hazards_opponent_ability_or_items'] * this.punish_multiplier)
         this.p2_rewards_tracker['damage_by_hazards_opponent_ability_or_items'].push(-this.reward_config['damage_by_hazards_opponent_ability_or_items'])
         message = `_p2_${pkmn} hurt by spikes`
+        if(output.search(stealthrock_damage_regex)){
+          message = `_p2_${pkmn} hurt by rocks`
+        }
+        if(output.search(opponent_ability_damage_regex)){
+          message = `_p2_${pkmn} hurt by ability`
+        }
+        if(output.search(item_damage_from_opponent_regex)){
+          message = `_p2_${pkmn} hurt by item damage`
+        }
         metrics_prefix = 'p2'
       }
       var pkmn_form = this.get_form_for_pokemon(is_player_1, pkmn)
@@ -3604,16 +3976,16 @@ def process_boost_unboost(self, output, is_boost=True):
       message_was_processed = true
       var [is_player_1, pkmn, position] = this.get_player_pkmn_position(output)
       if (is_player_1){
-        this.p1_reward -= this.reward_config['critical']
-        this.p1_rewards_tracker['critical'].push(-this.reward_config['critical'])
+        this.p1_reward -= this.reward_config['critical'] * this.punish_multiplier
+        this.p1_rewards_tracker['critical'].push(-this.reward_config['critical'] * this.punish_multiplier)
         this.p2_reward += this.reward_config['critical']
         this.p2_rewards_tracker['critical'].push(this.reward_config['critical'])
       }else{
         metrics_prefix = 'p2'
         this.p1_reward += this.reward_config['critical']
         this.p1_rewards_tracker['critical'].push(this.reward_config['critical'])
-        this.p2_reward -= this.reward_config['critical']
-        this.p2_rewards_tracker['critical'].push(-this.reward_config['critical'])
+        this.p2_reward -= this.reward_config['critical'] * this.punish_multiplier
+        this.p2_rewards_tracker['critical'].push(-this.reward_config['critical'] * this.punish_multiplier)
       }
       message = 'Critical hit!'
 
@@ -3728,18 +4100,18 @@ def process_boost_unboost(self, output, is_boost=True):
       var fainted_reward = this.reward_config['fainted']
       var [is_player_1, pkmn, position] = this.get_player_pkmn_position(output)
       if (is_player_1){
-        this.p1_reward -= fainted_reward
+        this.p1_reward -= fainted_reward * this.punish_multiplier
         this.p2_reward += fainted_reward
-        this.p1_rewards_tracker['fainted'].push(-this.reward_config['critical'])
+        this.p1_rewards_tracker['fainted'].push(-this.reward_config['critical'] * this.punish_multiplier)
         this.p2_rewards_tracker['fainted'].push(this.reward_config['critical'])
 
         message = `_p1_${pkmn} fainted`
       }else{
         metrics_prefix = 'p2'
-        this.p2_reward -= fainted_reward
+        this.p2_reward -= fainted_reward * this.punish_multiplier
         this.p1_reward += fainted_reward
         this.p1_rewards_tracker['fainted'].push(this.reward_config['critical'])
-        this.p2_rewards_tracker['fainted'].push(-this.reward_config['critical'])
+        this.p2_rewards_tracker['fainted'].push(-this.reward_config['critical'] * this.punish_multiplier)
         message = `_p2_${pkmn} fainted`
 
       }
@@ -3819,6 +4191,9 @@ def process_boost_unboost(self, output, is_boost=True):
 
     if(message){
       this.append_to_transcript(message);
+    }
+    if(message_was_processed && output){
+      this.append_processed_output(output)
     }
     if(!message_was_processed && output){
       this.unprocessed_events.push(output)

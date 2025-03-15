@@ -1447,7 +1447,12 @@ getObservationForSide(sideId, sideName, request) {
 		'transcript': transcript,
 		'id': sideId,
 		'name': sideName,
+		'processed_messages': this.stateTracker.processed_output,
 	  }
+	}
+
+	if (sideId.includes('p1')){
+		this.stateTracker.reset_processed_output();
 	}
 
 	return observationsSet
